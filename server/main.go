@@ -9,6 +9,8 @@ import (
 	"log"
 	"math"
 	"net/http"
+	"os"
+	"path"
 	"strconv"
 
 	"github.com/fogleman/density"
@@ -16,6 +18,8 @@ import (
 	"github.com/gorilla/mux"
 	"github.com/lucasb-eyer/go-colorful"
 )
+
+const CachePath = "cache"
 
 var Port int
 var Keyspace string
@@ -102,7 +106,7 @@ func getPoints(session *gocql.Session, zoom, x, y int) []Point {
 	return result
 }
 
-func Render(zoom, x, y int, points []Point) image.Image {
+func render(zoom, x, y int, points []Point) (image.Image, bool) {
 	lat2, lng1 := density.TileLatLng(zoom, x, y)
 	lat1, lng2 := density.TileLatLng(zoom, x+1, y+1)
 	d := math.Pow(4, float64(Zoom-zoom))
@@ -119,6 +123,7 @@ func Render(zoom, x, y int, points []Point) image.Image {
 	}
 
 	im := image.NewNRGBA(image.Rect(0, 0, 256, 256))
+	ok := false
 	for y := 0; y < 256; y++ {
 		for x := 0; x < 256; x++ {
 			var t, tw float64
@@ -139,9 +144,19 @@ func Render(zoom, x, y int, points []Point) image.Image {
 			c := colorful.Hsv(215.0, 1-t*t, 1)
 			r, g, b := c.RGB255()
 			im.SetNRGBA(x, 255-y, color.NRGBA{r, g, b, a})
+			ok = true
 		}
 	}
-	return im
+	return im, ok
+}
+
+func cachePath(zoom, x, y int) string {
+	return fmt.Sprintf("%s/%d/%d/%d.png", CachePath, zoom, x, y)
+}
+
+func pathExists(p string) bool {
+	_, err := os.Stat(p)
+	return err == nil
 }
 
 func Handler(w http.ResponseWriter, r *http.Request) {
@@ -150,14 +165,36 @@ func Handler(w http.ResponseWriter, r *http.Request) {
 	x := parseInt(vars["x"])
 	y := parseInt(vars["y"])
 
-	session, _ := Cluster.CreateSession()
-	defer session.Close()
-	points := getPoints(session, zoom, x, y)
-	fmt.Println(zoom, x, y, len(points))
-
-	im := Render(zoom, x, y, points)
+	p := cachePath(zoom, x, y)
+	if !pathExists(p) {
+		// nothing in cache, render the tile
+		session, _ := Cluster.CreateSession()
+		defer session.Close()
+		points := getPoints(session, zoom, x, y)
+		fmt.Println(zoom, x, y, len(points))
+		im, ok := render(zoom, x, y, points)
+		if ok {
+			// save tile in cache
+			d, _ := path.Split(p)
+			os.MkdirAll(d, 0777)
+			f, err := os.Create(p)
+			if err != nil {
+				// unable to cache, just send the png
+				w.Header().Set("Content-Type", "image/png")
+				png.Encode(w, im)
+				return
+			}
+			png.Encode(f, im)
+			f.Close()
+		} else {
+			// blank tile
+			http.NotFound(w, r)
+			return
+		}
+	}
+	// serve cached tile
 	w.Header().Set("Content-Type", "image/png")
-	png.Encode(w, im)
+	http.ServeFile(w, r, p)
 }
 
 func main() {
