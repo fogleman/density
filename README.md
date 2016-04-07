@@ -49,6 +49,8 @@ Several command line options are available:
 | -lng | 1 | CSV column index of longitude values |
 | -zoom | 18 | Zoom level to use for binning points |
 
+Just run the loader whenever you need to insert more data.
+
 ### Serving Tiles
 
 Once the data is loaded into Cassandra, the tile server can be run for rendering tiles on the fly.
