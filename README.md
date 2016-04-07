@@ -2,6 +2,8 @@
 
 Render millions of points on a map.
 
+![Map](http://i.imgur.com/qhkUlAK.png)
+
 ### Dependencies
 
   - Go
