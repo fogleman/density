@@ -78,4 +78,4 @@ Then visit [http://localhost:8000/](http://localhost:8000/) in your browser!
 ### TODO
 
 - tile rendering options
-- caching tiles
+- multiple layers
