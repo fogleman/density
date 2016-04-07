@@ -30,6 +30,8 @@ create table points (
 );
 */
 
+const Workers = 64
+
 var Keyspace string
 var Table string
 var LatIndex int
@@ -45,10 +47,20 @@ func init() {
 	flag.IntVar(&Zoom, "zoom", 18, "tile zoom")
 }
 
+type Point struct {
+	Lat, Lng float64
+}
+
 func insert(session *gocql.Session, lat, lng float64) {
 	x, y := density.TileXY(Zoom, lat, lng)
 	if err := session.Query(Query, Zoom, x, y, lat, lng).Exec(); err != nil {
 		log.Fatal(err)
+	}
+}
+
+func worker(session *gocql.Session, points <-chan Point) {
+	for point := range points {
+		insert(session, point.Lat, point.Lng)
 	}
 }
 
@@ -63,9 +75,12 @@ func main() {
 	session, _ := cluster.CreateSession()
 	defer session.Close()
 
+	points := make(chan Point, 1024)
+	for i := 0; i < Workers; i++ {
+		go worker(session, points)
+	}
+
 	reader := csv.NewReader(os.Stdin)
-	reader.Read() // read header line
-	rows := 0
 	for {
 		record, err := reader.Read()
 		if err != nil {
@@ -76,10 +91,7 @@ func main() {
 		if lat == 0 || lng == 0 {
 			continue
 		}
-		insert(session, lat, lng)
-		rows++
-		if rows%10000 == 0 {
-			fmt.Println(rows)
-		}
+		points <- Point{lat, lng}
 	}
+	close(points)
 }
