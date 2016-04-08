@@ -64,64 +64,60 @@ type Point struct {
 	X, Y float64
 }
 
-func loadPoints(session *gocql.Session, zoom, x, y int) []Point {
-	var result []Point
+type Key struct {
+	X, Y int
+}
+
+func loadPoints(session *gocql.Session, zoom, x, y, tx, ty int, grid map[Key]float64) int {
+	lat2, lng1 := density.TileLatLng(zoom, x, y)
+	lat1, lng2 := density.TileLatLng(zoom, x+1, y+1)
+
+	iter := session.Query(Query, Zoom, tx, ty).Iter()
+	var rows int
 	var lat, lng float64
-	iter := session.Query(Query, zoom, x, y).Iter()
 	for iter.Scan(&lat, &lng) {
-		result = append(result, Point{lng, lat})
+		kx := int(math.Floor((lng - lng1) / (lng2 - lng1) * 256))
+		ky := int(math.Floor((lat - lat1) / (lat2 - lat1) * 256))
+		grid[Key{kx, ky}]++
+		rows++
 	}
+
 	if err := iter.Close(); err != nil {
 		log.Fatal(err)
 	}
-	return result
+
+	return rows
 }
 
-func getPoints(session *gocql.Session, zoom, x, y int) []Point {
+func getPoints(session *gocql.Session, zoom, x, y int, grid map[Key]float64) int {
 	if zoom < 12 {
-		return nil
+		return 0
 	}
 	var x0, y0, x1, y1 int
 	p := 1 // padding
-	if zoom == Zoom {
-		x0, y0 = x-p, y-p
-		x1, y1 = x+p, y+p
-	}
 	if zoom > Zoom {
 		d := int(math.Pow(2, float64(zoom-Zoom)))
 		x0, y0 = x/d-p, y/d-p
 		x1, y1 = x/d+p, y/d+p
-	}
-	if zoom < Zoom {
+	} else if zoom < Zoom {
 		d := int(math.Pow(2, float64(Zoom-zoom)))
 		x0, y0 = x*d-p, y*d-p
 		x1, y1 = (x+1)*d-1+p, (y+1)*d-1+p
+	} else {
+		x0, y0 = x-p, y-p
+		x1, y1 = x+p, y+p
 	}
-	var result []Point
+	var rows int
 	for tx := x0; tx <= x1; tx++ {
 		for ty := y0; ty <= y1; ty++ {
-			result = append(result, loadPoints(session, Zoom, tx, ty)...)
+			rows += loadPoints(session, zoom, x, y, tx, ty, grid)
 		}
 	}
-	return result
+	return rows
 }
 
-func render(zoom, x, y int, points []Point) (image.Image, bool) {
-	lat2, lng1 := density.TileLatLng(zoom, x, y)
-	lat1, lng2 := density.TileLatLng(zoom, x+1, y+1)
+func render(zoom, x, y int, grid map[Key]float64) (image.Image, bool) {
 	d := math.Pow(4, float64(Zoom-zoom))
-
-	type Key struct {
-		X, Y int
-	}
-
-	grid := make(map[Key]float64)
-	for _, point := range points {
-		x := int(math.Floor((point.X - lng1) / (lng2 - lng1) * 256))
-		y := int(math.Floor((point.Y - lat1) / (lat2 - lat1) * 256))
-		grid[Key{x, y}]++
-	}
-
 	im := image.NewNRGBA(image.Rect(0, 0, 256, 256))
 	ok := false
 	for y := 0; y < 256; y++ {
@@ -170,9 +166,10 @@ func Handler(w http.ResponseWriter, r *http.Request) {
 		// nothing in cache, render the tile
 		session, _ := Cluster.CreateSession()
 		defer session.Close()
-		points := getPoints(session, zoom, x, y)
-		fmt.Println(zoom, x, y, len(points))
-		im, ok := render(zoom, x, y, points)
+		grid := make(map[Key]float64)
+		rows := getPoints(session, zoom, x, y, grid)
+		fmt.Println(zoom, x, y, rows)
+		im, ok := render(zoom, x, y, grid)
 		if ok {
 			// save tile in cache
 			d, _ := path.Split(p)
