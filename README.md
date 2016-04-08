@@ -65,6 +65,7 @@ Once the data is loaded into Cassandra, the tile server can be run for rendering
 | -table | points | Cassandra table to load from |
 | -zoom | 18 | Zoom level that was used for binning points |
 | -port | 5000 | Tile server port number |
+| -cache | cache | Directory for caching tile images |
 
 ### Serving Maps
 

@@ -30,6 +30,7 @@ create table points (
 );
 */
 
+const CqlHost = "127.0.0.1"
 const Workers = 64
 
 var Keyspace string
@@ -70,7 +71,7 @@ func main() {
 	Query = "INSERT INTO %s (zoom, x, y, lat, lng) VALUES (?, ?, ?, ?, ?);"
 	Query = fmt.Sprintf(Query, Table)
 
-	cluster := gocql.NewCluster("127.0.0.1")
+	cluster := gocql.NewCluster(CqlHost)
 	cluster.Keyspace = Keyspace
 	session, _ := cluster.CreateSession()
 	defer session.Close()
