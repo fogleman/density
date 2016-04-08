@@ -44,7 +44,7 @@ type kernelItem struct {
 var kernel []kernelItem
 
 func init() {
-	n := 3
+	n := 2
 	for dy := -n; dy <= n; dy++ {
 		for dx := -n; dx <= n; dx++ {
 			d := math.Sqrt(float64(dx*dx + dy*dy))
@@ -93,8 +93,8 @@ func getPoints(session *gocql.Session, zoom, x, y int, grid map[Key]float64) int
 	if zoom < 12 {
 		return 0
 	}
-	var x0, y0, x1, y1 int
 	p := 1 // padding
+	var x0, y0, x1, y1 int
 	if zoom > Zoom {
 		d := int(math.Pow(2, float64(zoom-Zoom)))
 		x0, y0 = x/d-p, y/d-p
@@ -116,8 +116,7 @@ func getPoints(session *gocql.Session, zoom, x, y int, grid map[Key]float64) int
 	return rows
 }
 
-func render(zoom, x, y int, grid map[Key]float64) (image.Image, bool) {
-	d := math.Pow(4, float64(Zoom-zoom))
+func render(grid map[Key]float64, scale float64) (image.Image, bool) {
 	im := image.NewNRGBA(image.Rect(0, 0, 256, 256))
 	ok := false
 	for y := 0; y < 256; y++ {
@@ -132,8 +131,8 @@ func render(zoom, x, y int, grid map[Key]float64) (image.Image, bool) {
 			if t == 0 {
 				continue
 			}
-			t *= 64
-			t /= d
+			t *= 32
+			t /= scale
 			t /= tw
 			t = t / (t + 1)
 			a := uint8(255 * math.Pow(t, 0.5))
@@ -167,9 +166,10 @@ func Handler(w http.ResponseWriter, r *http.Request) {
 		session, _ := Cluster.CreateSession()
 		defer session.Close()
 		grid := make(map[Key]float64)
+		scale := math.Pow(4, float64(Zoom-zoom))
 		rows := getPoints(session, zoom, x, y, grid)
 		fmt.Println(zoom, x, y, rows)
-		im, ok := render(zoom, x, y, grid)
+		im, ok := render(grid, scale)
 		if ok {
 			// save tile in cache
 			d, _ := path.Split(p)
