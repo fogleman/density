@@ -72,6 +72,8 @@ func Handler(w http.ResponseWriter, r *http.Request) {
 			http.NotFound(w, r)
 			return
 		}
+	} else {
+		fmt.Printf("CACHED (%d %d %d)\n", zoom, x, y)
 	}
 	// serve cached tile
 	w.Header().Set("Content-Type", "image/png")

@@ -32,13 +32,14 @@ type Tile struct {
 	Lat0, Lng0 float64
 	Lat1, Lng1 float64
 	Grid       map[IntPoint]float64
+	Points     int
 }
 
 func NewTile(zoom, x, y int) *Tile {
 	lat1, lng0 := TileLatLng(zoom, x, y)
 	lat0, lng1 := TileLatLng(zoom, x+1, y+1)
 	grid := make(map[IntPoint]float64)
-	return &Tile{zoom, x, y, lat0, lng0, lat1, lng1, grid}
+	return &Tile{zoom, x, y, lat0, lng0, lat1, lng1, grid, 0}
 }
 
 func (tile *Tile) Add(lat, lng float64) {
@@ -46,6 +47,7 @@ func (tile *Tile) Add(lat, lng float64) {
 	x := int(math.Floor((lng - tile.Lng0) / (tile.Lng1 - tile.Lng0) * TileSize))
 	y := int(math.Floor((lat - tile.Lat0) / (tile.Lat1 - tile.Lat0) * TileSize))
 	tile.Grid[IntPoint{x, y}]++
+	tile.Points++
 }
 
 func (tile *Tile) Render(kernel Kernel, scale float64) (image.Image, bool) {

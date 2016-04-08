@@ -5,6 +5,7 @@ import (
 	"image"
 	"log"
 	"math"
+	"time"
 
 	"github.com/gocql/gocql"
 )
@@ -24,12 +25,19 @@ func NewRenderer(host, keyspace, table string, baseZoom int) *Renderer {
 }
 
 func (r *Renderer) Render(zoom, x, y int) (image.Image, bool) {
+	start := time.Now()
 	session, _ := r.Cluster.CreateSession()
 	defer session.Close()
 	tile := r.loadTile(session, zoom, x, y)
 	kernel := NewKernel(2)
 	scale := 32 / math.Pow(4, float64(r.BaseZoom-zoom))
-	return tile.Render(kernel, scale)
+	im, ok := tile.Render(kernel, scale)
+	elapsed := time.Now().Sub(start).Seconds()
+	if ok {
+		fmt.Printf("RENDER (%d %d %d) %8d pts %.3fs\n",
+			zoom, x, y, tile.Points, elapsed)
+	}
+	return im, ok
 }
 
 func (r *Renderer) loadPoints(session *gocql.Session, x, y int, tile *Tile) {
