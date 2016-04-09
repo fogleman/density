@@ -4,6 +4,12 @@ Render millions of points on a map.
 
 ![Map](http://i.imgur.com/qhkUlAK.png)
 
+### Demo Site
+
+This demo shows 77 million taxi pickups in NYC - from January to June 2015.
+
+https://www.michaelfogleman.com/static/density/
+
 ### Dependencies
 
   - Go
