@@ -43,10 +43,16 @@ func NewTile(zoom, x, y int) *Tile {
 }
 
 func (tile *Tile) Add(lat, lng float64) {
-	// TODO: bilinear interpolation
-	x := int(math.Floor((lng - tile.Lng0) / (tile.Lng1 - tile.Lng0) * TileSize))
-	y := int(math.Floor((lat - tile.Lat0) / (tile.Lat1 - tile.Lat0) * TileSize))
-	tile.Grid[IntPoint{x, y}]++
+	u := (lng - tile.Lng0) / (tile.Lng1 - tile.Lng0) * TileSize
+	v := (lat - tile.Lat0) / (tile.Lat1 - tile.Lat0) * TileSize
+	x := int(math.Floor(u))
+	y := int(math.Floor(v))
+	u = u - math.Floor(u)
+	v = v - math.Floor(v)
+	tile.Grid[IntPoint{x + 0, y + 0}] += (1 - u) * (1 - v)
+	tile.Grid[IntPoint{x + 0, y + 1}] += (1 - u) * v
+	tile.Grid[IntPoint{x + 1, y + 0}] += u * (1 - v)
+	tile.Grid[IntPoint{x + 1, y + 1}] += u * v
 	tile.Points++
 }
 
