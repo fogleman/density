@@ -92,6 +92,12 @@ func main() {
 		if lat == 0 || lng == 0 {
 			continue
 		}
+		if lat < -90 || lat > 90 {
+			continue
+		}
+		if lng < -180 || lng > 180 {
+			continue
+		}
 		points <- Point{lat, lng}
 	}
 	close(points)
