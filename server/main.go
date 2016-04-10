@@ -52,7 +52,9 @@ func Handler(w http.ResponseWriter, r *http.Request) {
 	p := cachePath(zoom, x, y)
 	if !pathExists(p) {
 		// nothing in cache, render the tile
-		renderer := density.NewRenderer(CqlHost, Keyspace, Table, BaseZoom)
+		s1 := density.NewTileSource(CqlHost, Keyspace, "pickups", BaseZoom, 215)
+		s2 := density.NewTileSource(CqlHost, Keyspace, "dropoffs", BaseZoom, 15)
+		renderer := density.NewRenderer(s1, s2)
 		im, ok := renderer.Render(zoom, x, y)
 		if ok {
 			// save tile in cache

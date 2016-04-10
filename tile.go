@@ -1,12 +1,6 @@
 package density
 
-import (
-	"image"
-	"image/color"
-	"math"
-
-	"github.com/lucasb-eyer/go-colorful"
-)
+import "math"
 
 const TileSize = 256
 
@@ -56,30 +50,16 @@ func (tile *Tile) Add(lat, lng float64) {
 	tile.Points++
 }
 
-func (tile *Tile) Render(kernel Kernel, scale float64) (image.Image, bool) {
-	im := image.NewNRGBA(image.Rect(0, 0, TileSize, TileSize))
-	ok := false
-	for y := 0; y < TileSize; y++ {
-		for x := 0; x < TileSize; x++ {
-			var t, tw float64
-			for _, k := range kernel {
-				nx := x + k.Dx
-				ny := y + k.Dy
-				t += tile.Grid[IntPoint{nx, ny}] * k.Weight
-				tw += k.Weight
-			}
-			if t == 0 {
-				continue
-			}
-			t *= scale
-			t /= tw
-			t = t / (t + 1)
-			a := uint8(255 * math.Pow(t, 0.5))
-			c := colorful.Hsv(215.0, 1-t*t, 1)
-			r, g, b := c.RGB255()
-			im.SetNRGBA(x, TileSize-1-y, color.NRGBA{r, g, b, a})
-			ok = true
-		}
+func (tile *Tile) Sample(kernel Kernel, scale float64, x, y int) float64 {
+	var t, tw float64
+	for _, k := range kernel {
+		nx := x + k.Dx
+		ny := y + k.Dy
+		t += tile.Grid[IntPoint{nx, ny}] * k.Weight
+		tw += k.Weight
 	}
-	return im, ok
+	t *= scale
+	t /= tw
+	// t = t / (t + 1)
+	return t
 }
