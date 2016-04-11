@@ -10,9 +10,16 @@ import (
 
 const TileSize = 256
 
-func TileXY(zoom int, lat, lng float64) (x int, y int) {
-	x = int(math.Floor((lng + 180.0) / 360.0 * (math.Exp2(float64(zoom)))))
-	y = int(math.Floor((1.0 - math.Log(math.Tan(lat*math.Pi/180.0)+1.0/math.Cos(lat*math.Pi/180.0))/math.Pi) / 2.0 * (math.Exp2(float64(zoom)))))
+func TileXY(zoom int, lat, lng float64) (x, y int) {
+	fx, fy := TileFloatXY(zoom, lat, lng)
+	x = int(math.Floor(fx))
+	y = int(math.Floor(fy))
+	return
+}
+
+func TileFloatXY(zoom int, lat, lng float64) (x, y float64) {
+	x = (lng + 180.0) / 360.0 * (math.Exp2(float64(zoom)))
+	y = (1.0 - math.Log(math.Tan(lat*math.Pi/180.0)+1.0/math.Cos(lat*math.Pi/180.0))/math.Pi) / 2.0 * (math.Exp2(float64(zoom)))
 	return
 }
 
