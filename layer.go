@@ -9,6 +9,11 @@ import (
 	"strings"
 )
 
+func Stitch(urlTemplate string, lat, lng float64, zoom, w, h int) (*image.NRGBA, error) {
+	layer := NewTileLayer(urlTemplate)
+	return layer.GetTiles(lat, lng, zoom, w, h)
+}
+
 func GetImage(url string) (image.Image, error) {
 	response, err := http.Get(url)
 	if err != nil {
@@ -35,7 +40,7 @@ func (layer *TileLayer) GetTile(z, x, y int) (image.Image, error) {
 	return GetImage(url)
 }
 
-func (layer *TileLayer) GetTiles(lat, lng float64, zoom, w, h int) (image.Image, error) {
+func (layer *TileLayer) GetTiles(lat, lng float64, zoom, w, h int) (*image.NRGBA, error) {
 	im := image.NewNRGBA(image.Rect(0, 0, w, h))
 	cx, cy := TileFloatXY(zoom, lat, lng)
 	x0 := cx - float64(w)/2/TileSize
@@ -46,16 +51,29 @@ func (layer *TileLayer) GetTiles(lat, lng float64, zoom, w, h int) (image.Image,
 	y0i := int(math.Floor(y0))
 	x1i := int(math.Floor(x1))
 	y1i := int(math.Floor(y1))
+	ch := make(chan error)
 	for x := x0i; x <= x1i; x++ {
 		for y := y0i; y <= y1i; y++ {
 			px := int(float64(w) * (float64(x) - x0) / (x1 - x0))
 			py := int(float64(h) * (float64(y) - y0) / (y1 - y0))
-			t, err := layer.GetTile(zoom, x, y)
-			if err != nil {
+			go layer.getTilesWorker(im, zoom, x, y, px, py, ch)
+		}
+	}
+	for x := x0i; x <= x1i; x++ {
+		for y := y0i; y <= y1i; y++ {
+			if err := <-ch; err != nil {
 				return nil, err
 			}
-			draw.Draw(im, image.Rect(px, py, px+TileSize, py+TileSize), t, image.ZP, draw.Src)
 		}
 	}
 	return im, nil
+}
+
+func (layer *TileLayer) getTilesWorker(im *image.NRGBA, zoom, x, y, px, py int, ch chan error) {
+	t, err := layer.GetTile(zoom, x, y)
+	if err != nil {
+		ch <- err
+	}
+	draw.Draw(im, image.Rect(px, py, px+TileSize, py+TileSize), t, image.ZP, draw.Src)
+	ch <- nil
 }
