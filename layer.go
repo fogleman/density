@@ -1,6 +1,7 @@
 package density
 
 import (
+	"fmt"
 	"image"
 	"image/draw"
 	"math"
@@ -15,6 +16,7 @@ func Stitch(urlTemplate string, lat, lng float64, zoom, w, h int) (*image.NRGBA,
 }
 
 func GetImage(url string) (image.Image, error) {
+	fmt.Println(url)
 	response, err := http.Get(url)
 	if err != nil {
 		return nil, err
@@ -52,11 +54,12 @@ func (layer *TileLayer) GetTiles(lat, lng float64, zoom, w, h int) (*image.NRGBA
 	x1i := int(math.Floor(x1))
 	y1i := int(math.Floor(y1))
 	ch := make(chan error)
+	sem := make(chan int, 64)
 	for x := x0i; x <= x1i; x++ {
 		for y := y0i; y <= y1i; y++ {
 			px := int(float64(w) * (float64(x) - x0) / (x1 - x0))
 			py := int(float64(h) * (float64(y) - y0) / (y1 - y0))
-			go layer.getTilesWorker(im, zoom, x, y, px, py, ch)
+			go layer.getTilesWorker(im, zoom, x, y, px, py, ch, sem)
 		}
 	}
 	for x := x0i; x <= x1i; x++ {
@@ -69,10 +72,13 @@ func (layer *TileLayer) GetTiles(lat, lng float64, zoom, w, h int) (*image.NRGBA
 	return im, nil
 }
 
-func (layer *TileLayer) getTilesWorker(im *image.NRGBA, zoom, x, y, px, py int, ch chan error) {
+func (layer *TileLayer) getTilesWorker(im *image.NRGBA, zoom, x, y, px, py int, ch chan error, sem chan int) {
+	sem <- 1
 	t, err := layer.GetTile(zoom, x, y)
+	<-sem
 	if err != nil {
 		ch <- err
+		return
 	}
 	draw.Draw(im, image.Rect(px, py, px+TileSize, py+TileSize), t, image.ZP, draw.Src)
 	ch <- nil

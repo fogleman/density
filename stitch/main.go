@@ -10,15 +10,16 @@ import (
 )
 
 const (
-	lat  = 35.7796
-	lng  = -78.6382
-	zoom = 14
-	w    = 2048 / 2
-	h    = 1024 / 2
+	lat  = 36.0017991
+	lng  = -78.9345229
+	zoom = 16
+	w    = 4096
+	h    = 4096
 )
 
 var urls = []string{
 	"http://a.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}.png",
+	"http://localhost:5000/{z}/{x}/{y}.png",
 }
 
 func SavePNG(path string, im image.Image) error {
