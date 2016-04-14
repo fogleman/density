@@ -54,6 +54,9 @@ type Point struct {
 
 func insert(session *gocql.Session, lat, lng float64) {
 	x, y := density.TileXY(Zoom, lat, lng)
+	if x < 0 || y < 0 {
+		return // bad data point
+	}
 	if err := session.Query(Query, Zoom, x, y, lat, lng).Exec(); err != nil {
 		log.Fatal(err)
 	}
