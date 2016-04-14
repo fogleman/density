@@ -54,7 +54,7 @@ func (layer *TileLayer) GetTiles(lat, lng float64, zoom, w, h int) (*image.NRGBA
 	x1i := int(math.Floor(x1))
 	y1i := int(math.Floor(y1))
 	ch := make(chan error)
-	sem := make(chan int, 64)
+	sem := make(chan int, 16)
 	for x := x0i; x <= x1i; x++ {
 		for y := y0i; y <= y1i; y++ {
 			px := int(float64(w) * (float64(x) - x0) / (x1 - x0))
@@ -77,7 +77,7 @@ func (layer *TileLayer) getTilesWorker(im *image.NRGBA, zoom, x, y, px, py int, 
 	t, err := layer.GetTile(zoom, x, y)
 	<-sem
 	if err != nil {
-		ch <- err
+		ch <- nil
 		return
 	}
 	draw.Draw(im, image.Rect(px, py, px+TileSize, py+TileSize), t, image.ZP, draw.Src)

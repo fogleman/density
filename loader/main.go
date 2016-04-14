@@ -7,6 +7,7 @@ import (
 	"log"
 	"os"
 	"strconv"
+	"time"
 
 	"github.com/fogleman/density"
 	"github.com/gocql/gocql"
@@ -76,6 +77,7 @@ func main() {
 
 	cluster := gocql.NewCluster(CqlHost)
 	cluster.Keyspace = Keyspace
+	cluster.Timeout = 10 * time.Second
 	session, _ := cluster.CreateSession()
 	defer session.Close()
 
