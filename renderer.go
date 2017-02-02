@@ -53,7 +53,7 @@ func (r *Renderer) loadPoints(session *gocql.Session, x, y int, tile *Tile) {
 
 func (r *Renderer) loadTile(session *gocql.Session, zoom, x, y int) *Tile {
 	tile := NewTile(zoom, x, y)
-	if zoom < 12 {
+	if zoom < 3 {
 		return tile
 	}
 	p := 1 // padding

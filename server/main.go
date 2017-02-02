@@ -62,6 +62,7 @@ func Handler(w http.ResponseWriter, r *http.Request) {
 			if err != nil {
 				// unable to cache, just send the png
 				w.Header().Set("Content-Type", "image/png")
+				w.Header().Set("Access-Control-Allow-Origin", "*")
 				png.Encode(w, im)
 				return
 			}
@@ -77,6 +78,7 @@ func Handler(w http.ResponseWriter, r *http.Request) {
 	}
 	// serve cached tile
 	w.Header().Set("Content-Type", "image/png")
+	w.Header().Set("Access-Control-Allow-Origin", "*")
 	http.ServeFile(w, r, p)
 }
 

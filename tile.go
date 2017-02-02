@@ -18,15 +18,17 @@ func TileXY(zoom int, lat, lng float64) (x, y int) {
 }
 
 func TileFloatXY(zoom int, lat, lng float64) (x, y float64) {
-	x = (lng + 180.0) / 360.0 * (math.Exp2(float64(zoom)))
-	y = (1.0 - math.Log(math.Tan(lat*math.Pi/180.0)+1.0/math.Cos(lat*math.Pi/180.0))/math.Pi) / 2.0 * (math.Exp2(float64(zoom)))
+	lat_rad := lat * math.Pi / 180
+	n := math.Pow(2, float64(zoom))
+	x = (lng + 180) / 360 * n
+	y = (1 - math.Log(math.Tan(lat_rad)+(1/math.Cos(lat_rad)))/math.Pi) / 2 * n
 	return
 }
 
 func TileLatLng(zoom, x, y int) (lat, lng float64) {
-	n := math.Pi - 2.0*math.Pi*float64(y)/math.Exp2(float64(zoom))
-	lat = 180.0 / math.Pi * math.Atan(0.5*(math.Exp(n)-math.Exp(-n)))
-	lng = float64(x)/math.Exp2(float64(zoom))*360.0 - 180.0
+	n := math.Pow(2, float64(zoom))
+	lng = float64(x)/n*360 - 180
+	lat = math.Atan(math.Sinh(math.Pi*(1-2*float64(y)/n))) * 180 / math.Pi
 	return
 }
 
@@ -36,22 +38,22 @@ type IntPoint struct {
 
 type Tile struct {
 	Zoom, X, Y int
-	Lat0, Lng0 float64
-	Lat1, Lng1 float64
 	Grid       map[IntPoint]float64
 	Points     int
 }
 
 func NewTile(zoom, x, y int) *Tile {
-	lat1, lng0 := TileLatLng(zoom, x, y)
-	lat0, lng1 := TileLatLng(zoom, x+1, y+1)
 	grid := make(map[IntPoint]float64)
-	return &Tile{zoom, x, y, lat0, lng0, lat1, lng1, grid, 0}
+	return &Tile{zoom, x, y, grid, 0}
 }
 
 func (tile *Tile) Add(lat, lng float64) {
-	u := (lng - tile.Lng0) / (tile.Lng1 - tile.Lng0) * TileSize
-	v := (lat - tile.Lat0) / (tile.Lat1 - tile.Lat0) * TileSize
+	u, v := TileFloatXY(tile.Zoom, lat, lng)
+	u -= float64(tile.X)
+	v -= float64(tile.Y)
+	v = 1 - v
+	u *= TileSize
+	v *= TileSize
 	x := int(math.Floor(u))
 	y := int(math.Floor(v))
 	u = u - math.Floor(u)

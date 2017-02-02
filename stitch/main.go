@@ -10,11 +10,11 @@ import (
 )
 
 const (
-	lat  = 36.0017991
-	lng  = -78.9345229
-	zoom = 16
-	w    = 4096
-	h    = 4096
+	lat  = 0
+	lng  = 0
+	zoom = 3
+	w    = 2048
+	h    = 2048
 )
 
 var urls = []string{
